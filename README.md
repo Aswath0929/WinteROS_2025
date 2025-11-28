@@ -187,4 +187,4 @@ And help forge the Mark-1.
 
 The escape begins now.
 
-Head on to [Project Mark-1: Initialization Sequence](/README.md) and power up the cave terminal.
+Head on to [Project Mark-1: Initialization Sequence](/Week%200/Project%20Mark-1%3A%20Initialization%20Sequence.md) and power up the cave terminal.
