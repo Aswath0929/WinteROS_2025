@@ -85,6 +85,7 @@ sudo apt upgrade
 
 Installation command:
 ```bash
+sudo apt install ros-dev-tools
 sudo apt install ros-jazzy-desktop
 ```
 
@@ -113,4 +114,6 @@ ros2 run demo_nodes_py listener
 ```
 
 If ROS2 Jazzy has been installed correctly on your machine, then you should see the `talker` saying that it's "Publishing messages" and the `listener` saying "I heard" those messages. This verifies that both the C++ and Python APIs are working properly. Hooray!
+
+> If the examples nodes don't run or if you get an error saying `Package 'demo_nodes_cpp' not found` then run the command `sudo apt install ros-jazzy-desktop` again and try re-running the examples.
 
