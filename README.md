@@ -1,6 +1,6 @@
 # WinteROS_2025
 ## Forging the Mark-1 in the Cave  
-//<img src="W0_Images/giphy.gif">
+<img src="Images/iron-man-iron-man-hammer.gif">
 
 Welcome to **winteROS**.
 
@@ -55,6 +55,9 @@ By the end of Week 0, Tony has mastered the fundamentals of ROS2 communication.
 The cave is still dark, but the system inside his head is now awake.
 
 ---
+<img src="Images/ros2.gif">
+
+---
 
 ## ❄️ Week 1 — Programming the Mark-1’s Brain
 
@@ -71,6 +74,9 @@ By the end of the week, Tony has built the **brainstem** of the Mark-1:
 code that can speak, react, respond, and coordinate.
 
 The cave flickers brighter as terminals begin to glow.
+
+---
+<img src="Images/ros_turtle_sim.gif">
 
 ---
 
@@ -98,6 +104,10 @@ By the end of Week 2, the Cave Crawler becomes the Mark-1’s first metal backbo
 
 ---
 
+<img src=Images/robocar.png>
+
+---
+
 ## ❄️ Week 3 — Vision & Autonomy: Teaching the Machine to See
 
 To navigate the cave, Tony’s machine must see — truly see.
@@ -112,6 +122,9 @@ it plans paths, avoids threats, and explores unknown areas without guidance.
 
 This week, the Cave Crawler evolves from a vehicle into an intelligent explorer —  
 the early mind of the Mark-1 suit.
+
+---
+<img src=Images/nav.png>
 
 ---
 
@@ -130,7 +143,9 @@ This is where the machine becomes more than a vehicle —
 it becomes a tool for survival.
 
 ---
+<img src=Images/roboarm.png>
 
+---
 ## ❄️ Week 5 — Integration: Assembling the Mark-1 Escape System
 
 The final step is integration.
@@ -159,7 +174,9 @@ When the machine succeeds, Tony finally has what he needs:
 The cave walls tremble as he begins the breakout.
 
 ---
+<img src=Images/integrated.png>
 
+---
 ## ❄️ Begin the Mission  
 This is Tony Stark’s story —  
 a story of building, learning, surviving.
@@ -169,3 +186,5 @@ Power up ROS2.
 And help forge the Mark-1.
 
 The escape begins now.
+
+Head on to [Project Mark-1: Initialization Sequence](/README.md) and power up the cave terminal.
