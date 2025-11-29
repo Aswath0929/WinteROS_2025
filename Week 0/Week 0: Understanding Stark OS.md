@@ -15,6 +15,10 @@ In Stark terms:
 **This is where you study the brain that will run the suit.**
 
 ---
+
+![StarkOS in use](../Images/IronMans_StarkOS.png)
+
+---
 # ⚙️ Configuring StarkOS Environment
 
 Before the Mark-1 can respond, obey, or calculate anything, the cave terminal must be wired with the correct environment settings - just like Tony rerouting power through salvaged circuits.
@@ -93,6 +97,7 @@ ros2 run turtlesim turtlesim_node
 ```
 
 It will open a window:
+
 ![Turtlesim Window](../Images/week0_turtlesim.png)
 
 Open a new terminal and run:
@@ -105,6 +110,8 @@ You will be able to move your turtle now through the terminal!!
 This confirms that StarkOS can successfully issue movement commands — your first proof that the system can control something in the real (or simulated) world.
 
 ## Task 3: Activating StarkOS HUD (`rqt`)
+
+![IronMan HUD](../Images/ironmanhud.png)
 
 Open a new terminal to install `rqt` and its plugins:
 ```bash
@@ -150,5 +157,16 @@ ros2 run turtlesim turtle_teleop_key --ros-args --remap turtle1/cmd_vel:=turtle2
 Now you can move `turtle2` in this terminal!!
 
 ---
+# And just like that… **that was easy.**  
+<p align="center">
+  <img src="../Images/tonystarkEasy.gif" width="1000"><br>
+  <em>“Piece of cake.” — Tony Stark</em>
+</p>
 
-This is it for the initial part of this ROS2 bootcamp. Stay tuned for next [Week 1: The Birth of StarkOS Intelligence](../Week1/)
+System online.  
+Terminal configured.  
+Turtles moved.  
+Told you it’d be easy.
+
+Suit up and continue to  
+👉 [**Week 1: The Birth of StarkOS Intelligence**](../Week1/)
