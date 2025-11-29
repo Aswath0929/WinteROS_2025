@@ -308,4 +308,4 @@ This is the moment Tony Stark looked at his glowing reactor and said:
 
 **“Yeah… I can work with this.”**
 
-Proceed to [Week 0: Understanding Stark OS](./) and begin building the Mark-1.
+Proceed to [Week 0: Understanding Stark OS](./Week%200:%20Understanding%20Stark%20OS.md) and begin building the Mark-1.
