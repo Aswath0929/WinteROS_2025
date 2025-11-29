@@ -285,3 +285,5 @@ If ROS2 Jazzy has been installed correctly on your machine, then you should see 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/9be17ef2-fbf3-4b5d-b540-536e87a4cf18" width="450">
 </p>
+
+Head on to [Week 0](/Week%200/week0.md)

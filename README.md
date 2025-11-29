@@ -188,3 +188,5 @@ And help forge the Mark-1.
 The escape begins now.
 
 Head on to [Project Mark-1: Initialization Sequence](/Week%200/Project%20Mark-1%3A%20Initialization%20Sequence.md) and power up the cave terminal.
+
+> Note: If you already have ROS2 Jazzy installed and initialized to launch on your system then skip the `Initialization Sequence` and head on to [Week 0](/Week%200/week0.md).
