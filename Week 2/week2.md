@@ -1,0 +1,572 @@
+# Image Processing with OpenCV
+
+We'll learn how to implement our own node for image processing using ROS and OpenCV. To start, let's create a package alongside our pre-existing package `erc_gazebo_sensors` that we made in the previous week:
+
+## Create new package
+Ensure you have finished `erc_gazebo_sensors` and all its content from **Week 2**. 
+Let's now create a new package `erc_gazebo_sensors_py` to run our python scripts from:
+
+```bash
+cd ~/erc_ws/src
+
+ros2 pkg create --build-type=ament_python erc_gazebo_sensors_py
+```
+
+This will create the package inside your `src` folder.
+
+## Creating new node
+Open your workspace in VS Code/VS Codium and navigate to the `erc_gazebo_sensors_py` folder.
+
+The directory will mostly look like this:
+```bash
+erc_gazebo_sensors_py/
+├── erc_gazebo_sensors_py
+│   └── __init__.py
+├── package.xml
+├── resource
+│   └── erc_gazebo_sensors_py
+├── setup.cfg
+├── setup.py
+└── test
+    ├── test_copyright.py
+    ├── test_flake8.py
+    └── test_pep257.py
+```
+
+In this, navigate to the inner folder `erc_gazebo_sensors_py` which has the file `__init__.py`. 
+
+Create a new file of the name `chase_the_ball.py`. Yes, this will make our robot chase a red ball around. Exciting, isn't it!!!
+
+Let's do this step by step
+
+## Step 1
+Making the node which subscribes to `/camera/image` topic as that contains the camera feed. It then converts it to OpenCV compatible frame and displays it using OpenCV.
+
+Paste this in `chase_the_ball.py`
+
+```python
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+from geometry_msgs.msg import Twist
+import cv2
+import numpy as np
+import threading
+
+class ImageSubscriber(Node):
+    def __init__(self):
+        super().__init__('image_subscriber')
+        
+        # Create a subscriber with a queue size of 1 to only keep the last frame
+        self.subscription = self.create_subscription(
+            Image,
+            'camera/image',
+            self.image_callback,
+            1  # Queue size of 1
+        )
+
+        self.publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+        
+        # Initialize CvBridge
+        self.bridge = CvBridge()
+        
+        # Variable to store the latest frame
+        self.latest_frame = None
+        self.frame_lock = threading.Lock()  # Lock to ensure thread safety
+        
+        # Flag to control the display loop
+        self.running = True
+
+        # Start a separate thread for spinning (to ensure image_callback keeps receiving new frames)
+        self.spin_thread = threading.Thread(target=self.spin_thread_func)
+        self.spin_thread.start()
+
+    def spin_thread_func(self):
+        """Separate thread function for rclpy spinning."""
+        while rclpy.ok() and self.running:
+            rclpy.spin_once(self, timeout_sec=0.05)
+
+    def image_callback(self, msg):
+        """Callback function to receive and store the latest frame."""
+        # Convert ROS Image message to OpenCV format and store it
+        with self.frame_lock:
+            self.latest_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+
+    def stop(self):
+        """Stop the node and the spin thread."""
+        self.running = False
+        self.spin_thread.join()
+
+    def display_image(self):
+        """Main loop to process and display the latest frame."""
+        # Create a single OpenCV window
+        cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("frame", 800,600)
+
+        while rclpy.ok():
+            # Check if there is a new frame available
+            if self.latest_frame is not None:
+
+                # Process the current image
+                self.process_image(self.latest_frame)
+
+                # Show the latest frame
+                cv2.imshow("frame", self.latest_frame)
+                self.latest_frame = None  # Clear the frame after displaying
+
+            # Check for quit key
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                self.running = False
+                break
+
+            rclpy.spin_once(self, timeout_sec=0.05)
+
+        # Close OpenCV window after quitting
+        cv2.destroyAllWindows()
+        self.running = False
+
+    def process_image(self, img):
+        """Image processing task."""
+        return
+
+def main(args=None):
+
+    print("OpenCV version: %s" % cv2.__version__)
+
+    rclpy.init(args=args)
+    node = ImageSubscriber()
+    
+    try:
+        node.display_image()  # Run the display loop
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.stop()
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+> In OpenCV, each frame is handled individually and we have to perform operations such as converting it to a CV2 compatible frame for all the frames we get.
+
+Build and source your workspace.
+
+You can run this after launching your robot as you did in the previous week and you should be able to see a camera feed. 
+> To end the `chase_the_ball` program, just clicking **X** on the window isn't enough. Close it with `Ctrl + C` in the terminal you opened it in.
+
+Don't worry too much about the threads part of the code. It just ensures that the image processing happens on a separate thread as it is quite an intensive task.
+
+## Step 2
+
+As you may have noticed, the `process_image` function doesn't really do anything right now. Let's fix that
+
+Change your `process_image` function to the one given below:
+
+```python
+def process_image(self, img):
+    """Image processing task."""
+    msg = Twist()
+    msg.linear.x = 0.0
+    msg.linear.y = 0.0
+    msg.linear.z = 0.0
+    msg.angular.x = 0.0
+    msg.angular.y = 0.0
+    msg.angular.z = 0.0
+
+    rows,cols = img.shape[:2]
+
+    R,G,B = self.convert2rgb(img)
+
+    redMask = self.threshold_binary(R, (220, 255))
+    stackedMask = np.dstack((redMask, redMask, redMask))
+    contourMask = stackedMask.copy()
+    crosshairMask = stackedMask.copy()
+
+    # return value of findContours depends on OpenCV version
+    (contours, hierarchy) = cv2.findContours(redMask.copy(), 1, cv2.CHAIN_APPROX_NONE)
+
+    # Find the biggest contour (if detected)
+    if len(contours) > 0:
+        
+        c = max(contours, key=cv2.contourArea)
+        M = cv2.moments(c)
+
+        # Make sure that "m00" won't cause ZeroDivisionError: float division by zero
+        if M["m00"] != 0:
+            cx = int(M["m10"] / M["m00"])
+            cy = int(M["m01"] / M["m00"])
+        else:
+            cx, cy = 0, 0
+
+        # Show contour and centroid
+        cv2.drawContours(contourMask, contours, -1, (0,255,0), 10)
+        cv2.circle(contourMask, (cx, cy), 5, (0, 255, 0), -1)
+
+        # Show crosshair and difference from middle point
+        cv2.line(crosshairMask,(cx,0),(cx,rows),(0,0,255),10)
+        cv2.line(crosshairMask,(0,cy),(cols,cy),(0,0,255),10)
+        cv2.line(crosshairMask,(int(cols/2),0),(int(cols/2),rows),(255,0,0),10)
+
+    # Return processed frames
+    return redMask, contourMask, crosshairMask
+```
+
+Don't run it quite yet though as we have used some helper functions in the above code that we need to define
+
+#### `convert2RGB` and `threshold_binary`:
+
+Write this function above the `process_image` function.
+> Please don't write it inside the process image function. They are two fully separate functions which have no overlap.
+
+```python
+def convert2rgb(self, img):
+    R = img[:, :, 2]
+    G = img[:, :, 1]
+    B = img[:, :, 0]
+
+    return R, G, B
+
+def threshold_binary(self, img, thresh=(200, 255)):
+    binary = np.zeros_like(img)
+    binary[(img >= thresh[0]) & (img <= thresh[1])] = 1
+
+    return binary*255
+```
+
+## How does it work?
+The essence behind OpenCV is that it dissects each frame of the video into three different photo channels - **Red, Blue and Green**.  
+We then perform operations on each of the channels separately using the intensity values of the different colours.
+
+### Change your `display_image` function to show all the different frames that `process_image` returns
+
+```python
+def display_image(self):
+    """Main loop to process and display the latest frame."""
+    # Create a single OpenCV window
+    cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("frame", 800,600)
+
+    while rclpy.ok():
+        # Check if there is a new frame available
+        if self.latest_frame is not None:
+
+            # Process the current image
+            mask, contour, crosshair = self.process_image(self.latest_frame)
+
+            # Show the latest frame
+            cv2.imshow("frame", self.latest_frame)
+            cv2.imshow("mask", mask)
+            cv2.imshow("contour", contour)
+            cv2.imshow("crosshair", crosshair)
+            self.latest_frame = None  # Clear the frame after displaying
+
+        # Check for quit key
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            self.running = False
+            break
+
+    # Close OpenCV window after quitting
+    cv2.destroyAllWindows()
+    self.running = False
+```
+
+This time the node will open 4 OpenCV windows and try to find the red ball on the image. Let's add a red ball to the simulation first using the `Resource Spawner` plugin of Gazebo:
+
+And now the robot should be able to follow the red ball!!
+
+# Autonomous Navigation
+
+In this lesson we'll learn how to map the robot's environment, how to do localization on an existing map and we'll learn to use ROS2's navigation stack.
+
+## Download ROS Package
+To download the package, go to `Downloads` and clone the repo with the following command:
+```bash
+git clone https://github.com/Sagarv812/winteros_week3
+```
+
+This will make a folder named `winteros_week3` in your Downloads. In that folder there will be three more folders named:
+- `erc_ros2_navigation`
+- `erc_ros2_navigation_py`
+- `erc_trajectory_server`
+
+Copy all these folders and paste them in `~/erc_ws/src`, i.e., inside the `src` folder of you ROS2 workspace. 
+
+Now **build** and **source** your workspace.
+
+You can now test it by running:
+```bash
+ros2 launch erc_ros2_navigation spawn_robot.launch.py
+```
+
+## Mapping
+Let's learn how to create the map of the robot's surrounding. In practice we are using SLAM algorithms, SLAM stands for Simultaneous Localization and Mapping. It is a fundamental technique in robotics (and other fields) that allows a robot to:
+
+1. Build a map of an unknown environment (mapping).
+2. Track its own pose (position and orientation) within that map at the same time (localization).
+
+Usually SLAM algorithms consists of 4 core functionalities:
+1. Sensor inputs
+SLAM typically uses sensor data (e.g., LIDAR scans, camera images, or depth sensor measurements) to detect features or landmarks in the environment.
+2. State estimation
+An internal state (the robot’s pose, including x, y, yaw) is estimated using algorithms like Extended Kalman Filters, Particle Filters, or Graph Optimization.
+3. Map building
+As the robot moves, it accumulates new sensor data. The SLAM algorithm integrates that data into a global map (2D grid map, 3D point cloud, or other representations).
+4. Loop closure
+When the robot revisits a previously mapped area, the SLAM algorithm detects that it’s the same place (loop closure). This knowledge is used to reduce accumulated drift and refine both the map and pose estimates.
+
+For doing all this, we will use the `slam_toolbox` package that has to be installed first:
+```bash
+sudo apt update
+sudo apt install ros-jazzy-slam-toolbox
+```
+
+Now we will make a new launch file for mapping.
+
+Let's also move the RViz related functions into the new launch file from `spawn_robot.launch.py`. Go to that file and comment out:
+```python
+# launchDescriptionObject.add_action(rviz_launch_arg)
+# launchDescriptionObject.add_action(rviz_config_arg)
+launchDescriptionObject.add_action(world_arg)
+launchDescriptionObject.add_action(model_arg)
+launchDescriptionObject.add_action(x_arg)
+launchDescriptionObject.add_action(y_arg)
+launchDescriptionObject.add_action(yaw_arg)
+launchDescriptionObject.add_action(sim_time_arg)
+launchDescriptionObject.add_action(world_launch)
+# launchDescriptionObject.add_action(rviz_node)
+launchDescriptionObject.add_action(spawn_urdf_node)
+launchDescriptionObject.add_action(gz_bridge_node)
+launchDescriptionObject.add_action(gz_image_bridge_node)
+launchDescriptionObject.add_action(relay_camera_info_node)
+launchDescriptionObject.add_action(robot_state_publisher_node)
+launchDescriptionObject.add_action(trajectory_node)
+launchDescriptionObject.add_action(ekf_node)
+```
+> Note: You can add a comment or make a pre-existing a line a comment in python by adding a '#' before it.
+
+Also change the `reference_frame_id` of `erc_trajectory_server` from `odom` to `map` becase this will be our new reference frame when we have a map!
+
+```python
+trajectory_node = Node(
+    package='erc_trajectory_server',
+    executable='erc_trajectory_server',
+    name='erc_trajectory_server',
+    parameters=[{'reference_frame_id': 'map'}] # Change in this line
+)
+```
+
+Let's create `mapping.launch.py`. Create the file inside the `launch` folder of `erc_ros2_navigation`:
+
+```python
+import os
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
+from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+
+def generate_launch_description():
+
+    pkg_erc_ros2_navigation = get_package_share_directory('erc_ros2_navigation')
+
+    gazebo_models_path, ignore_last_dir = os.path.split(pkg_erc_ros2_navigation)
+    os.environ["GZ_SIM_RESOURCE_PATH"] += os.pathsep + gazebo_models_path
+
+    rviz_launch_arg = DeclareLaunchArgument(
+        'rviz', default_value='true',
+        description='Open RViz'
+    )
+
+    rviz_config_arg = DeclareLaunchArgument(
+        'rviz_config', default_value='mapping.rviz',
+        description='RViz config file'
+    )
+
+    sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time', default_value='True',
+        description='Flag to enable use_sim_time'
+    )
+
+    # Generate path to config file
+    interactive_marker_config_file_path = os.path.join(
+        get_package_share_directory('interactive_marker_twist_server'),
+        'config',
+        'linear.yaml'
+    )
+
+    # Path to the Slam Toolbox launch file
+    slam_toolbox_launch_path = os.path.join(
+        get_package_share_directory('slam_toolbox'),
+        'launch',
+        'online_async_launch.py'
+    )
+
+    slam_toolbox_params_path = os.path.join(
+        get_package_share_directory('erc_ros2_navigation'),
+        'config',
+        'slam_toolbox_mapping.yaml'
+    )
+
+    # Launch rviz
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        arguments=['-d', PathJoinSubstitution([pkg_erc_ros2_navigation, 'rviz', LaunchConfiguration('rviz_config')])],
+        condition=IfCondition(LaunchConfiguration('rviz')),
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+        ]
+    )
+
+    slam_toolbox_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(slam_toolbox_launch_path),
+        launch_arguments={
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'slam_params_file': slam_toolbox_params_path,
+        }.items()
+    )
+
+    launchDescriptionObject = LaunchDescription()
+
+    launchDescriptionObject.add_action(rviz_launch_arg)
+    launchDescriptionObject.add_action(rviz_config_arg)
+    launchDescriptionObject.add_action(sim_time_arg)
+    launchDescriptionObject.add_action(rviz_node)
+    launchDescriptionObject.add_action(slam_toolbox_launch)
+
+    return launchDescriptionObject
+```
+
+Build the workspace and open two terminals. Make sure to **source** your workspace in both. 
+
+In one terminal,
+```bash
+ros2 launch erc_ros2_navigation spawn_robot.launch.py
+```
+
+And in another,
+```bash
+ros2 launch erc_ros2_navigation mapping.launch.py
+```
+
+You will be able to see an additional frame `map` over the `odom` odometry frame. This can also be visualized in RViz.
+
+## Localization
+
+While mapping was the process of creating a representation (a map) of an environment. Localization is the process by which a robot determines its own position and orientation within a known environment (map). In other words:
+
+- The environment or map is typically already available or pre-built.
+- The robot’s task is to figure out “Where am I?” or “Which direction am I facing?” using sensor data, often by matching its current perceptions to the known map.
+
+
+### Localization with AMCL
+
+AMCL (Adaptive Monte Carlo Localization) is a particle filter–based 2D localization algorithm. The robot’s possible poses (position + orientation in 2D) are represented by a set of particles. It adaptively samples the robot’s possible poses according to sensor readings and motion updates, converging on an accurate estimate of where the robot is within a known map.
+
+AMCL is part of the ROS2 navigation stack, let's install it first:
+```bash
+sudo apt install ros-jazzy-nav2-bringup 
+sudo apt install ros-jazzy-nav2-amcl
+```
+
+And then let's create a new launch file `localization.launch.py`:
+```python
+import os
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
+from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+
+def generate_launch_description():
+
+    pkg_erc_ros2_navigation = get_package_share_directory('erc_ros2_navigation')
+
+    gazebo_models_path, ignore_last_dir = os.path.split(pkg_erc_ros2_navigation)
+    os.environ["GZ_SIM_RESOURCE_PATH"] += os.pathsep + gazebo_models_path
+
+    rviz_launch_arg = DeclareLaunchArgument(
+        'rviz', default_value='true',
+        description='Open RViz'
+    )
+
+    rviz_config_arg = DeclareLaunchArgument(
+        'rviz_config', default_value='localization.rviz',
+        description='RViz config file'
+    )
+
+    sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time', default_value='True',
+        description='Flag to enable use_sim_time'
+    )
+
+    # Path to the Slam Toolbox launch file
+    nav2_localization_launch_path = os.path.join(
+        get_package_share_directory('nav2_bringup'),
+        'launch',
+        'localization_launch.py'
+    )
+
+    localization_params_path = os.path.join(
+        get_package_share_directory('erc_ros2_navigation'),
+        'config',
+        'amcl_localization.yaml'
+    )
+
+    map_file_path = os.path.join(
+        get_package_share_directory('erc_ros2_navigation'),
+        'maps',
+        'my_map.yaml'
+    )
+
+    # Launch rviz
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        arguments=['-d', PathJoinSubstitution([pkg_erc_ros2_navigation, 'rviz', LaunchConfiguration('rviz_config')])],
+        condition=IfCondition(LaunchConfiguration('rviz')),
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+        ]
+    )
+
+ 
+    localization_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(nav2_localization_launch_path),
+        launch_arguments={
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'params_file': localization_params_path,
+                'map': map_file_path,
+        }.items()
+    )
+
+    launchDescriptionObject = LaunchDescription()
+
+    launchDescriptionObject.add_action(rviz_launch_arg)
+    launchDescriptionObject.add_action(rviz_config_arg)
+    launchDescriptionObject.add_action(sim_time_arg)
+    launchDescriptionObject.add_action(rviz_node)
+    launchDescriptionObject.add_action(localization_launch)
+
+    return launchDescriptionObject
+```
+
+Following the same procedure as earlier, this file should be made in the `launch` folder. Now **build** the workspace and **source** it in both the terminals.
+
+In one terminal,
+```bash
+ros2 launch erc_ros2_navigation spawn_robot.launch.py
+```
+
+And in another,
+```bash
+ros2 launch erc_ros2_navigation localization.launch.py
+```
+
+To start using AMCL, we have to provide an initial pose to the `/initialpose` topic. It's basically like telling the robot that hey i'm starting here at these coordinates. We can use RViz's built in tool for that.
