@@ -719,12 +719,6 @@ This will initialize AMCL's particles around the initial pose which can be displ
 
 <img width="2560" height="1334" alt="image" src="https://github.com/user-attachments/assets/b65f3e6c-4d08-4b2b-a814-0a1f83198f4d" />
 
-
-The initial distribution and spread of the partciles depends on the covariance matrix of the initial pose that cannot be changed in RViz, but we can publish our own `/initialpose` topic by a custom node which is in the package of this lesson, `send_initialpose.py`.
-
-<img width="2559" height="1335" alt="image" src="https://github.com/user-attachments/assets/bcaf636a-5d66-486e-800d-a118abee63f2" />
-
-
 The main purpose of the localization algorithm is establishing the transformation between the fixed map and the robot's odometry frame based on real time sensor data. We can visualize this in RViz as we saw it during mapping:
 
 <img width="2560" height="1334" alt="image" src="https://github.com/user-attachments/assets/9ba25a40-2275-48d8-a7a2-ed75e917af2e" />
