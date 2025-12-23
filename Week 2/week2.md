@@ -29,7 +29,7 @@ Type ```python3``` in Terminal to start Python interactive session and type foll
 import cv2 as cv
 print(cv.__version__)
 ```
-If you're encountering an issue with the cv2 (OpenCV) library and its interaction with the numpy library. then execute following
+If you're encountering an issue with the cv2 (OpenCV) library and its interaction with the numpy library, then execute the following.
 We dont want the most recent version of numpy as it cannot interact with cv_bridge
 
 ```bash
