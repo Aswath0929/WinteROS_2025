@@ -42,8 +42,6 @@ You may Install OpenCV from source. (Lengthy process)
 
 Please refer to this [link](https://docs.opencv.org/4.5.0/d2/de6/tutorial_py_setup_in_ubuntu.html). This installation can take some time so have patience.
 
-
-.
 # Image Processing with OpenCV
 
 We'll learn how to implement our own node for image processing using ROS and OpenCV. To start, let's create a package alongside our pre-existing package `erc_gazebo_sensors` that we made in the previous week:
