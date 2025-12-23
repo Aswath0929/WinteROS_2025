@@ -926,5 +926,30 @@ def generate_launch_description():
     return launchDescriptionObject
 ```
 
+We'll need 2 terminals as before, one for the simulation:
+```bash
+ros2 launch bme_ros2_navigation spawn_robot.launch.py
+```
+
+And in another terminal we launch the new `navigation.launch.py`:
+
+```bash
+ros2 launch bme_ros2_navigation navigation.launch.py
+```
+
+We are using AMCL, so first we'll have to publish an initial pose, then we have to tell the pose goal to the navigation stack. For that we can also use RViz's other built-in feature:
+
+<img width="2560" height="1335" alt="image" src="https://github.com/user-attachments/assets/870a8b60-ae1d-43e6-b3b3-24bb0ba6a164" />
+
+
+As soon as the pose goal is received the navigation stack plans a global path to the goal and the controller ensures locally that the robot follows the global path while it avoids dynamic obstacles. The controller calculates a cost map around the robot that determines the ideal trajectory of the robot. If there aren't any obstacles around the robot this cost map weighs the global plan. 
+
+<img width="2560" height="1336" alt="image" src="https://github.com/user-attachments/assets/b2b9a6d4-cf0c-407a-b1d4-a6f480d21d63" />
+
+
+If obstacles are detected around the robot those can be visualized as a cost map too:
+
+<img width="2560" height="1335" alt="image" src="https://github.com/user-attachments/assets/0d7df78c-1749-4a61-a619-f0a2b9bc32c8" />
+
 
 
