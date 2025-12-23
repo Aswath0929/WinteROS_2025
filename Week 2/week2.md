@@ -582,6 +582,23 @@ ros2 launch erc_ros2_navigation mapping.launch.py
 ```
 
 You will be able to see an additional frame `map` over the `odom` odometry frame. This can also be visualized in RViz.
+<img width="2560" height="1337" alt="image" src="https://github.com/user-attachments/assets/d93eea20-f820-4a9e-bfc8-91bb2717a066" />
+
+With SLAM Toolbox we can also save the maps, we have two options:
+1) `Save Map`: The map is saved as a `.pgm` file and a `.yaml` file. This is a black and white image file that can be used with other ROS nodes for localization as we will see later. Since it's only an image file it's impossible to continue the mapping with such a file because SLAM Toolbox handles the map in the background as a graph that cannot be restored from an image.
+2) `Serialize Map`: With this feature we can serialize and later deserialize SLAM Toolbox's graph, so it can be loaded and the mapping can be continued. Although other ROS nodes won't be able to read or use it for localization.
+
+<img width="2560" height="1339" alt="image" src="https://github.com/user-attachments/assets/cd117ed9-ef20-4f09-a543-f0fa66617e15" />
+
+After saving a serialized map next time we can load (deserialize it):
+
+<img width="2558" height="1337" alt="image" src="https://github.com/user-attachments/assets/e948762b-5e72-4343-9af8-b9a323242bb6" />
+
+
+And we can also load the map that is in the starter package of this lesson:
+
+<img width="2558" height="1339" alt="image" src="https://github.com/user-attachments/assets/53ff25cb-2115-443d-87f5-7d97a6bf302a" />
+
 
 ## Localization
 
@@ -698,3 +715,120 @@ ros2 launch erc_ros2_navigation localization.launch.py
 ```
 
 To start using AMCL, we have to provide an initial pose to the `/initialpose` topic. It's basically like telling the robot that hey i'm starting here at these coordinates. We can use RViz's built in tool for that.
+
+<img width="2560" height="1334" alt="image" src="https://github.com/user-attachments/assets/a0b689dd-34c0-43d3-8772-e60b4538ae15" />
+
+This will initialize AMCL's particles around the initial pose which can be displayed in RViz as a particle cloud where each particle rerpresnts a pose (position + orientation in 2D).
+
+<img width="2560" height="1334" alt="image" src="https://github.com/user-attachments/assets/b65f3e6c-4d08-4b2b-a814-0a1f83198f4d" />
+
+
+The initial distribution and spread of the partciles depends on the covariance matrix of the initial pose that cannot be changed in RViz, but we can publish our own `/initialpose` topic by a custom node which is in the package of this lesson, `send_initialpose.py`.
+
+<img width="2559" height="1335" alt="image" src="https://github.com/user-attachments/assets/bcaf636a-5d66-486e-800d-a118abee63f2" />
+
+
+The main purpose of the localization algorithm is establishing the transformation between the fixed map and the robot's odometry frame based on real time sensor data. We can visualize this in RViz as we saw it during mapping:
+
+<img width="2560" height="1334" alt="image" src="https://github.com/user-attachments/assets/9ba25a40-2275-48d8-a7a2-ed75e917af2e" />
+
+## Localization with SLAM toolbox
+
+It's possible to use SLAM toolbox in localization mode, it requires a small adjustment on the parameters which is already part of this lesson, `slam_toolbox_localization.yaml`. This requires the path to the serialized map file.
+
+> Make sure the `map_file_name` parameter is changed to the path on your machine to the serialized map file!
+
+Let's create the launch file for localization, `localization_slam_toolbox.launch.py`, it's very similar to the SLAM toolbox mapping launch file:
+
+```python
+import os
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, GroupAction
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
+from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+
+def generate_launch_description():
+
+    pkg_erc_ros2_navigation = get_package_share_directory('erc_ros2_navigation')
+
+    gazebo_models_path, ignore_last_dir = os.path.split(pkg_erc_ros2_navigation)
+    os.environ["GZ_SIM_RESOURCE_PATH"] += os.pathsep + gazebo_models_path
+
+    rviz_launch_arg = DeclareLaunchArgument(
+        'rviz', default_value='true',
+        description='Open RViz'
+    )
+
+    rviz_config_arg = DeclareLaunchArgument(
+        'rviz_config', default_value='mapping.rviz',
+        description='RViz config file'
+    )
+
+    sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time', default_value='True',
+        description='Flag to enable use_sim_time'
+    )
+
+    # Generate path to config file
+    interactive_marker_config_file_path = os.path.join(
+        get_package_share_directory('interactive_marker_twist_server'),
+        'config',
+        'linear.yaml'
+    )
+
+    # Path to the Slam Toolbox launch file
+    slam_toolbox_launch_path = os.path.join(
+        get_package_share_directory('slam_toolbox'),
+        'launch',
+        'localization_launch.py'
+    )
+
+    slam_toolbox_params_path = os.path.join(
+        get_package_share_directory('erc_ros2_navigation'),
+        'config',
+        'slam_toolbox_localization.yaml'
+    )
+
+    # Launch rviz
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        arguments=['-d', PathJoinSubstitution([pkg_erc_ros2_navigation, 'rviz', LaunchConfiguration('rviz_config')])],
+        condition=IfCondition(LaunchConfiguration('rviz')),
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+        ]
+    )
+
+    interactive_marker_twist_server_node = Node(
+        package='interactive_marker_twist_server',
+        executable='marker_server',
+        name='twist_server_node',
+        parameters=[interactive_marker_config_file_path],
+        output='screen',
+    )
+
+    slam_toolbox_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(slam_toolbox_launch_path),
+        launch_arguments={
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'slam_params_file': slam_toolbox_params_path,
+        }.items()
+    )
+
+    launchDescriptionObject = LaunchDescription()
+
+    launchDescriptionObject.add_action(rviz_launch_arg)
+    launchDescriptionObject.add_action(rviz_config_arg)
+    launchDescriptionObject.add_action(sim_time_arg)
+    launchDescriptionObject.add_action(rviz_node)
+    launchDescriptionObject.add_action(interactive_marker_twist_server_node)
+    launchDescriptionObject.add_action(slam_toolbox_launch)
+
+    return launchDescriptionObject
+
+```
+
