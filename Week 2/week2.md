@@ -597,7 +597,11 @@ After saving a serialized map next time we can load (deserialize it):
 
 And we can also load the map that is in the starter package of this lesson:
 
-<img width="2558" height="1339" alt="image" src="https://github.com/user-attachments/assets/53ff25cb-2115-443d-87f5-7d97a6bf302a" />
+<img width="2560" height="1600" alt="image" src="https://github.com/user-attachments/assets/bc7b2163-ffe7-4f4b-9dd2-ecb04d6d5809" />
+
+The paths provided are relative, assuming that your packages are located in the src directory and you are executing mapping.launch.py from the workspace root. If the launch fails, verify your current working directory and ensure the relative path to the maps is correct from that location.
+
+Best Practice: When saving files, specify the full directory path rather than just the filename to ensure data is stored in the intended location.
 
 
 ## Localization
