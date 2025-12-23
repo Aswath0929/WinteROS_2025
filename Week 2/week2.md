@@ -1,6 +1,7 @@
 ## OpenCV
 
-<img src="W2_Images/opencv_logo.png" width="320" height = "150">
+<img src="../Images/opencv_logo.png" width="320" height="150">
+
 
 OpenCV (Open-Source Computer Vision Library) is an open-source library that includes several hundreds of computer vision algorithms. It helps us in performing various operations on images very easily.
 ### Installation and Setup
